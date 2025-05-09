@@ -106,19 +106,34 @@ function displayResults(results) {
         const snippet = document.createElement('div');
         snippet.className = 'content';
 
-        if (result.highlights.length > 0 && result.highlights[0].snippet) {
-            let highlightedSnippet = result.highlights[0].snippet;
+        if (result.highlights.length > 0) {
+            const normalizedQuery = query.normalize('NFC').toLowerCase();
 
-            if (query) {
-                const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special characters
-                const regex = new RegExp(`(${escapedQuery})`, 'gi'); // Case-insensitive match
-                highlightedSnippet = highlightedSnippet.replace(regex, '<mark>$1</mark>'); // Highlight occurrences
+            // Attempt to find a relevant highlight
+            const relevantHighlight = result.highlights.find(h =>
+                h.snippet.normalize('NFC').toLowerCase().includes(normalizedQuery)
+            );
+
+            if (relevantHighlight && relevantHighlight.snippet) {
+                // Convert snippet to plain text before highlighting
+                const plainTextSnippet = relevantHighlight.snippet.replace(/<[^>]*>/g, '');
+
+                // Escape regex special characters in the query
+                const escapedQuery = normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${escapedQuery})`, 'gi');
+
+                // Apply highlighting
+                const highlightedSnippet = plainTextSnippet.replace(regex, '<mark>$1</mark>');
+
+                snippet.innerHTML = highlightedSnippet;
+            } else {
+                // Fallback to a plain text excerpt if no valid highlight is found
+                snippet.textContent = result.document.ocr_text_original.substring(0, 200) + '...';
             }
-
-            snippet.innerHTML = highlightedSnippet;
         } else {
             snippet.textContent = result.document.ocr_text_original.substring(0, 200) + '...'; // Fallback if no highlight
         }
+
 
         const actions = document.createElement('div');
         actions.className = 'field is-grouped mt-4';
